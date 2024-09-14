@@ -13,7 +13,7 @@ contents = [
 ]
 
 
-class TestFormatNumber(unittest.TestCase):
+class TestCleanFile(unittest.TestCase):
     def setUp(self):
         os.makedirs("./test_dir/empty", exist_ok=True)
         os.makedirs("./test_dir/files", exist_ok=True)

@@ -17,5 +17,5 @@ CONFIG = CleanFileConfig()
 script_dir = os.path.dirname(os.path.abspath(__file__))
 CONFIG.config_path = f'{script_dir}/config.properties'
 config.read(CONFIG.config_path)
-CONFIG.age = int(config['settings']['duration_day'])
+CONFIG.age = int(config['settings']['age'])
 CONFIG.base_path = config['settings']['clean_path']

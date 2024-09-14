@@ -1,6 +1,6 @@
 # Postgres Log & WAL File Cleaner
 
-This Python script is designed to clean up old files (older than a specific age) in a given directory. It is primarily used for cleaning PostgreSQL log files and WAL (Write-Ahead Log) files to free up disk space. The project also includes cron scripts to easily schedule cleanups and offers a to-do list for future improvements like checking for slow queries, monitoring sync status, and sending email alerts.
+This Python script is designed to clean up old files (older than a specific age) in a given directory. It is primarily used for cleaning PostgreSQL log files and WAL (Write-Ahead Log) files to free up disk space. The project also includes cron scripts to easily schedule cleanups and offers a to-do list for future improvements like monitoring PostgreSQL, pgpool2, and sending alerts for slow queries.
 
 ## Features
 - **Delete files older than a specific age**: Specify how many days old the files should be before they are deleted.
@@ -9,9 +9,14 @@ This Python script is designed to clean up old files (older than a specific age)
 - **Primarily for PostgreSQL**: Clean up PostgreSQL log files and WAL files, but can be adapted for other file types as well.
 
 ## To-Do List
-- Check for slow queries by monitoring `pg_log` files.
-- Monitor synchronization status between the master and slave node.
-- Send email alerts if certain conditions (like file size threshold, query slowdowns, sync failures) are met.
+
+### Planned Enhancements
+- **Monitor slow queries**: Track slow queries by analyzing the PostgreSQL `pg_log` files, and send alerts if slow queries exceed a defined threshold.
+- **Monitor synchronization status**: Monitor and log the sync status between the master and slave PostgreSQL nodes, and raise alerts if any synchronization issues are detected.
+- **Monitor pgpool2 status**:
+    - Check if pgpool2 is up or down.
+    - Monitor the active and standby node status in pgpool2 and send alerts if there's a failure or unexpected state.
+- **Email notifications**: Send email alerts for slow queries, node synchronization failures, or pgpool2 issues (e.g., master node down, failover issues).
 
 ## Table of Contents
 - [Requirements](#requirements)
@@ -27,6 +32,8 @@ This Python script is designed to clean up old files (older than a specific age)
 ## Requirements
 - Python 3.x
 - `os`, `sys`, `shutil`, `datetime` Python libraries (standard libraries)
+- `psycopg2` (optional, for querying PostgreSQL databases directly in future enhancements)
+- `smtplib` (optional, for sending email alerts)
 
 ## Installation
 Clone the repository and navigate to the project directory:
@@ -58,7 +65,7 @@ Alternatively, you can use a `config.properties` file to provide the directory a
 1. Create a `config.properties` file in the project root with the following content:
 
    ```
-   directory=/path/to/logs
+   clean_path=/path/to/logs
    age=30
    ```
 
@@ -126,7 +133,7 @@ The `config.properties` file supports the following properties:
 Example `config.properties`:
 
 ```properties
-directory=/var/lib/postgresql/data/pg_log
+clean_path=/var/lib/postgresql/data/pg_log
 age=30
 ```
 
@@ -145,3 +152,5 @@ Contributions are welcome! Feel free to submit a pull request or open an issue.
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
+
+Feel free to adjust the content as needed, and replace placeholder paths with your actual paths and repository URLs!
