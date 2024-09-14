@@ -52,7 +52,7 @@ Make sure Python 3 is installed on your system.
 You can run the script by specifying the base directory and file age via command-line arguments:
 
 ```bash
-python clean_logs.py -d /path/to/logs -a 30
+python main.py -d /path/to/logs -a 30
 ```
 
 - `-d`: The base directory where the script will search for old files.
@@ -72,7 +72,7 @@ Alternatively, you can use a `config.properties` file to provide the directory a
 2. Run the script without arguments:
 
    ```bash
-   python clean_logs.py
+   python main.py
    ```
 
 If no arguments are provided and no `config.properties` file is found, the script will prompt for the directory and age.
@@ -113,14 +113,14 @@ chmod +x cron_clean_old_wal.sh
 
 ```bash
 #!/bin/bash
-python /path/to/clean_logs.py -d /var/lib/postgresql/data/pg_log -a 30
+python /path/to/main.py -d /var/lib/postgresql/data/pg_log -a 30
 ```
 
 ### Sample `cron_clean_old_wal.sh`:
 
 ```bash
 #!/bin/bash
-python /path/to/clean_logs.py -d /var/lib/postgresql/data/pg_wal -a 7
+python /path/to/main.py -d /var/lib/postgresql/data/pg_wal -a 7
 ```
 
 ## Configuration
