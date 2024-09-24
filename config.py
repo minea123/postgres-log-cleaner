@@ -12,6 +12,12 @@ class CleanFileConfig:
         self.cpu_threshold = 50.0
         self.memory_threshold = 50.0
         self.disk_threshold = 50.0
+        self.db_master =""
+        self.db_master_db=""
+        self.db_master_port= 5432
+        self.db_master_user= ""
+        self.db_master_password = ""
+        self.db_slaves = ""
 
 
 
@@ -30,3 +36,9 @@ CONFIG.telegram_conversation_id = config["telegram"]["conversation_id"]
 CONFIG.cpu_threshold = float(config["monitor"]["cpu_threshold"])
 CONFIG.memory_threshold = float(config["monitor"]["memory_threshold"])
 CONFIG.disk_threshold = float(config["monitor"]["disk_threshold"])
+CONFIG.db_master = config["postgres"]["db_master"]
+CONFIG.db_master_user = config["postgres"]["db_master_user"]
+CONFIG.db_master_password = config["postgres"]["db_master_password"]
+CONFIG.db_master_port = int(config["postgres"]["db_master_port"])
+CONFIG.db_master_db= config["postgres"]["db_master_db"]
+CONFIG.db_slaves = config["postgres"]["db_slaves"]
