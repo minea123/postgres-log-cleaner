@@ -70,7 +70,7 @@ def clean_file(directory='/var/lib/postgresql/14/main/pg_log', total_day=30):
 
         file_path = os.path.join(directory, filename)
         file_age, file_size = get_file_age_and_size(file_path)
-        if file_age < total_day:
+        if file_age > total_day:
             try:
                 # Delete the file
                 os.remove(file_path)
