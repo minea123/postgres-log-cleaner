@@ -58,4 +58,4 @@ CONFIG.elastic_index = config["elastic"]["index"]
 CONFIG.index_replica = config["elastic"]["index_replica"]
 CONFIG.index_login = config["elastic"]["index_login"]
 CONFIG.white_list_ip = config["connection"]["white_list"].split(",")
-CONFIG.connection_log_path =  config["connection"]["white_list"].split(",")
+CONFIG.connection_log_path =  config["connection"]["log_path"]
