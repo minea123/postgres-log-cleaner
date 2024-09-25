@@ -103,7 +103,7 @@ def parse_log_line(line):
         pid, statement = match.group(1), match.group(2)
         if statement.startswith("connection received:"):
             host, port = parse_connection_info(statement)
-            connected_at = datetime.datetime
+            connected_at = datetime.datetime.now()
             print(f"connected from{host} : ,{port} @ {connected_at}")
             document = {"host": host, "port": port, "connecting_at": connected_at}
             es.index(index=CONFIG.index_replica, body=document)
