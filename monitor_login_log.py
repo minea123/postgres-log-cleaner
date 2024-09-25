@@ -35,7 +35,7 @@ class LogFileHandler(FileSystemEventHandler):
                 line = file.readline()
                 if not line:
                     break
-                print(line, end='')  # Print new line without adding extra newline
+               # print(line, end='')  # Print new line without adding extra newline
                 parse_log_line(line)
 
 
