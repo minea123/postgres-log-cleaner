@@ -5,6 +5,7 @@ import logging
 from config import CONFIG
 from telegram_message import send
 from elasticsearch import Elasticsearch
+
 es = Elasticsearch(
     hosts=CONFIG.elastic_search,
     api_key=CONFIG.elastic_api_key
@@ -43,6 +44,9 @@ def get_replication_status():
         col_names = [desc[0] for desc in cursor.description]
         for row in rows:
             document = dict(zip(col_names, row))
+            document["replay_lag"] = str(document["replay_lag"])
+            document["write_lag"] = str(document["write_lag"])
+            document["flush_lag"] = str(document["flush_lag"])
             client_ip, state, sync_state, sent_lsn, write_lsn, flush_lsn, replay_lsn, replay_lag, write_lag, flush_lag = row
             document["created_at"] = datetime.datetime.now()
             es.index(index=CONFIG.index_replica, body=document)
