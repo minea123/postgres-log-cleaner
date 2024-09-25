@@ -35,7 +35,7 @@ class LogFileHandler(FileSystemEventHandler):
                 line = file.readline()
                 if not line:
                     break
-               # print(line, end='')  # Print new line without adding extra newline
+                # print(line, end='')  # Print new line without adding extra newline
                 parse_log_line(line)
 
 
@@ -112,4 +112,5 @@ def parse_log_line(line):
 
 
 if __name__ == "__main__":
-    monitor_logs("/var/lib/postgresql/14/main/pg_log")
+    print(f"begin to watch file based on directory : {CONFIG.connection_log_path}")
+    monitor_logs(CONFIG.connection_log_path)
