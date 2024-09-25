@@ -106,7 +106,7 @@ def parse_log_line(line):
             connected_at = datetime.datetime.now()
             print(f"connected from{host} : ,{port} @ {connected_at}")
             document = {"host": host, "port": port, "connecting_at": connected_at}
-            es.index(index=CONFIG.index_replica, body=document)
+            es.index(index=CONFIG.index_login, body=document)
             if host not in CONFIG.white_list_ip:
                 send(f"receive attempt login from iP : {host} to PostgresDb")
 

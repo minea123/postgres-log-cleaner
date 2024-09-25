@@ -1,7 +1,14 @@
+import datetime
+
 import psycopg2
 import logging
 from config import CONFIG
 from telegram_message import send
+from elasticsearch import Elasticsearch
+es = Elasticsearch(
+    hosts=CONFIG.elastic_search,
+    api_key=CONFIG.elastic_api_key
+)
 
 
 def get_replication_status():
@@ -33,20 +40,12 @@ def get_replication_status():
 
         # Fetch and print results
         rows = cursor.fetchall()
+        col_names = [desc[0] for desc in cursor.description]
         for row in rows:
+            document = dict(zip(col_names, row))
             client_ip, state, sync_state, sent_lsn, write_lsn, flush_lsn, replay_lsn, replay_lag, write_lag, flush_lag = row
-            logging.info(f"Replication Info: {row}")
-            print(f"Client Address: {row[0]}")
-            print(f"State: {row[1]}")
-            print(f"Sync State: {row[2]}")
-            print(f"Sent LSN: {row[3]}")
-            print(f"Write LSN: {row[4]}")
-            print(f"Flush LSN: {row[5]}")
-            print(f"Replay LSN: {row[6]}")
-            print(f"Replay Lag: {row[7]}")
-            print(f"Write Lag: {row[8]}")
-            print(f"Flush Lag: {row[9]}")
-            print("\n")
+            document["created_at"] = datetime.datetime.now()
+            es.index(index=CONFIG.index_replica, body=document)
             if replay_lag.seconds > 0 or write_lag.seconds > 0 or flush_lag.seconds > 0:
                 send(
                     f"postgres db slave nodes [{client_ip}]  state: {state} ,sync : {sync_state} , sent_lsn:{sent_lsn},write_lsn:{write_lsn}, flush_lsn:{flush_lsn} has delay or lag replay_lag\t:{replay_lag} , \t write_lag: {write_lag} \t flush_lag : {flush_lag}")
