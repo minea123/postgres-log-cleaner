@@ -18,7 +18,7 @@ def main():
     logging.debug(f"Done clean file :")
     size_in_format = clean_file.format_file_size(total_file_size)
     logging.debug(f"Total file : {total_file} , size :  {size_in_format}")
-    telegram_message.send_message(f" clean file at {base_directory} #: {total_file}, size: {size_in_format}")
+    telegram_message.send(f" clean file at {base_directory} #: {total_file}, size: {size_in_format}")
 
 
 if __name__ == "__main__":
