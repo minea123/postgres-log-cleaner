@@ -49,7 +49,7 @@ def get_replication_status():
             print("\n")
             if replay_lag.seconds > 0 or write_lag.seconds > 0 or flush_lag.seconds > 0:
                 send(
-                    f"postgres db slave nodes [{client_ip}] has delay or lag replay_lag\t:{replay_lag} , \t write_lag: {write_lag} \t flush_lag : {flush_lag}")
+                    f"postgres db slave nodes [{client_ip}]  state: {state} ,sync : {sync_state} , sent_lsn:{sent_lsn},write_lsn:{write_lsn}, flush_lsn:{flush_lsn} has delay or lag replay_lag\t:{replay_lag} , \t write_lag: {write_lag} \t flush_lag : {flush_lag}")
             connected_slaves[client_ip] = True
         cursor.close()
         connection.close()

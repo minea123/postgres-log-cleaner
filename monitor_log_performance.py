@@ -1,5 +1,6 @@
 import datetime
 import re
+import enum
 from typing import List, Dict, Optional
 
 # Define regex patterns to match the log format
@@ -9,8 +10,16 @@ log_pattern = r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} UTC) \[(\d+)\] (\w+@
 SLOW_QUERY_THRESHOLD = 1.0
 
 
+class ConnectionState(enum.Enum):
+    Receive = 1
+    Authenticated = 2,
+    Authorized = 3,
+    Disconnected = 4
+
+
 class Connection:
-    def __init__(self, from_host: str, connected_at: datetime.datetime, user: str, database: str, pid="",
+    def __init__(self, from_host: str, connected_at: datetime.datetime = None, user: str = "", database: str = "",
+                 pid=0,
                  authorized=True):
         self.from_host = from_host
         self.connected_at = connected_at
@@ -20,7 +29,12 @@ class Connection:
         self.pid = pid
         self.session_time = ""
         self.client_port = 0
-        
+        self.method = ""
+        self.state = ConnectionState.Receive
+
+    def close_connection(self, session_time):
+        # session_time, user, database, host, port
+        self.session_time = session_time
 
 
 class Statement:
@@ -40,13 +54,27 @@ class Log:
         self.user = user
         self.db = db
         self.line = line
+        self.parameters = ""
+        if line.startswith("LOG"):
+            log_pattern = r'LOG: \s*(.*)'
+            match = re.search(log_pattern, line)
+            if match:
+                self.line = match.group(1)
+
+        elif line.startswith("DETAIL"):
+            detail_pattern = r'DETAIL: \s*(.*)'
+            match = re.search(detail_pattern, line)
+            if match:
+                self.line = match.group(1)
+                self.parameters = match.group(1)
+
         self.duration = 0.0
         self.complete_duration = False
         self.detail = ""
         self.statement = ""
         self.host = ""
         self.port = 0
-        self.parameters = ""
+
         self.execute_id = ""
         self.de_allocate = ""
         self.deallocate_duration = 0.0
@@ -116,11 +144,12 @@ def parse_statement(log_str):
 
 
 def parse_execution(execute_str: str):
-    pattern = r'execute\s+(.*)'
+    # pattern = r'execute\s+(.*)'
+    pattern = r"(execute\s+([^:]+)):(.*)"
     match = re.search(pattern, execute_str)
     if match:
-        return match.group(1)
-    return ""
+        return match.group(2), match.group(3)
+    return "", ""
 
 
 def parse_disconnection_info(log_str):
@@ -141,16 +170,125 @@ def parse_disconnection_info(log_str):
 class ConstructStatement:
     def __init__(self):
         self.items: List[Log] = []
-        self.queues: Dict[str, List[Log]] = {}
-        self.open_connections: Dict[str, List[Connection]] = {}
-        self.close_connections: Dict[str, List[Connection]] = {}
+        self.queues: Dict[int, List[Log]] = {}
+        self.open_connections: Dict[int, List[Connection]] = {}
+        self.close_connections: Dict[int, List[Connection]] = {}
+        self.statements = []
+        self.execute_query: Dict[int, Dict[str:Log]] = {}
+        self.complete_logs: Dict[int, List[Log]] = {}
+        self.complete_query: List[Statement] = []
 
-    def last_log(self, pid: str):
+    def allocate_connection(self, pid: int, conn: Connection):
+        conn.pid = pid
+        if pid in self.open_connections:
+            self.open_connections[pid].append(conn)
+        else:
+            self.open_connections[pid] = []
+            self.open_connections[pid].append(conn)
+
+    def last_open_connection(self, pid: int) -> Optional[Connection]:
+        if pid in self.open_connections:
+            items = self.open_connections[pid]
+            if len(items) > 0:
+                return items[len(items) - 1]
+        else:
+            conn = Connection("")
+            self.open_connections[pid] = [conn]
+            return conn
+        return None
+
+    def remove_open_connection(self, pid: int, from_host="", database="", user="") -> Optional[Connection]:
+        if pid not in self.open_connections:
+            return None
+        items = self.open_connections[pid]
+        if len(items) > 0:
+            open_conn = items[len(items) - 1]
+            if open_conn:
+                if open_conn.user == user and open_conn.database == database and open_conn.from_host == from_host:
+                    items.remove(open_conn)
+                    return open_conn
+        return None
+
+    def close_connection(self, pid: int, conn: Connection):
+        if pid not in self.close_connections:
+            self.close_connections[pid] = []
+        self.close_connections[pid].append(conn)
+
+    def add_log(self, pid: int, log: Log):
+        if pid not in self.queues:
+            self.queues[pid] = []
+        self.queues[pid].append(log)
+
+    def first_log(self, pid: int) -> Optional[Log]:
         if pid in self.queues:
             queue_items = self.queues.get(pid)
             if len(queue_items) > 0:
                 first_item = queue_items[0]
                 return first_item
+        return None
+
+    def remove_first_log(self, log: Log):
+        if log.pid in self.queues:
+            queue_items = self.queues.get(log.pid)
+            try:
+                queue_items.remove(log)
+                if log.pid not in self.complete_logs:
+                    self.complete_logs[log.pid] = []
+
+                self.complete_logs[log.pid].append(log)
+            except Exception as e:
+                print(e)
+
+    def log_final_statement(self, log: Log):
+        last_conn = self.last_open_connection(log.pid)
+        statement = Statement()
+        if last_conn:
+            statement.connection = last_conn
+        statement.duration = log.duration
+        statement.query = log.statement
+        statement.params = log.parameters
+        self.statements.append(statement)
+
+    def add_running_query(self, pid: int, log: Log):
+        if pid in self.execute_query:
+            running = self.execute_query[pid]
+            running[log.execute_id] = log
+        else:
+            self.execute_query[pid] = {}
+            self.execute_query[pid][log.execute_id] = log
+
+    def running_query(self, pid: int, execute_id) -> Optional[Log]:
+        if pid in self.execute_query:
+            running = self.execute_query[pid]
+            if execute_id in running:
+                return running[execute_id]
+        return None
+
+    def end_query(self, pid: int, execute_id, duration) -> Optional[Log]:
+        if pid in self.execute_query:
+            running = self.execute_query[pid]
+            if execute_id in running:
+                instance_query: Log = running[execute_id]
+                del running[execute_id]
+                instance_query.duration = instance_query.duration + duration
+                # self.complete_query.append( instance_query)
+
+        return None
+
+    def clear_connection(self):
+        for pid in list(self.close_connections.keys()):
+            connections = self.close_connections[pid]
+            print(f"remove len of connection : {len(connections)}")
+            del self.close_connections[pid]
+
+    def clear_queue(self):
+        for pid in list(self.queues.keys()):
+            items = self.queues.get(pid)
+            for item in self.items:
+                if item.complete_duration:
+                    items.remove(item)
+                    if len(items) == 0:
+                        del self.queues[pid]
 
 
 
@@ -165,61 +303,84 @@ def parse_slow_queries(log_lines):
             print(f"matched : {log_match.groups()}")
             str_date, pid, user_at_db, statement_string = log_match.groups()
             log_item = Log(str_date, pid, user_at_db, statement_string)
-            if log_item.line.startswith("duration:"):
+            if log_item.parameters != "":
+                first_item = con_statements.first_log(pid)
+                if first_item:
+                    first_item.parameters = log_item.parameters
+            elif log_item.line.startswith("duration:"):
                 duration = parse_duration(log_item.line)
-                last_item = con_statements.last_log(pid)
-                if last_item:
-                    last_item.complete_duration = True
-                    last_item.duration = duration
+                first_item = con_statements.first_log(pid)
+                if first_item:
+                    first_item.complete_duration = True
+                    first_item.duration = duration
+                    con_statements.log_final_statement(first_item)
+                    if first_item.execute_id != "":
+                        con_statements.add_running_query(log_item.pid, first_item)
+                    elif first_item.de_allocate != "":
+                        con_statements.end_query(log_item.pid, log_item.execute_id, duration)
+                    else:
+                        print("check ", log_item)
+                    con_statements.remove_first_log(first_item)
+                con_statements.clear_queue()
 
             elif log_item.line.startswith("execute"):
-                exec_str = parse_execution(log_item.line)
-                id, query = exec_str.split(":")
+                id, exec_str = parse_execution(log_item.line)
+                log_item.statement = exec_str
+                log_item.execute_id = id
+                con_statements.add_log(log_item.pid, log_item)
 
             elif log_item.line.startswith("statement:"):
                 statement_str = parse_statement(log_item.line)
-                _, id = statement_str.split(" ")
-            elif log_item.line.startswith("connection received:"):
-                host, port = parse_connection_info(log_item.line)
+                if statement_str.startswith("DEALLOCATE"):
+                    action, id = statement_str.split(" ")
+                    log_item.de_allocate = id
+                    log_item.execute_id = id
+
+                else:
+                    log_item.statement = statement_str
+                con_statements.add_log(log_item.pid, log_item)
+                # statement: SELECT
+                # statement: SELECT pg_catalog.pg_current_wal_lsn()
+                # statement: SELECT pg_catalog.pg_is_in_recovery()
+
             elif log_item.line.startswith("connection authenticated:"):
                 identity, method = parse_identity(log_item.line)
+                conn = con_statements.last_open_connection(log_item.pid)
+                if conn:
+                    conn.user = identity
+                    conn.method = method
+                    conn.state = ConnectionState.Authenticated
             elif log_item.line.startswith("connection authorized:"):
                 user, database = parse_authorized_user_database(log_item.line)
+                conn = con_statements.last_open_connection(log_item.pid)
+                if conn:
+                    conn.user = user
+                    conn.database = database
+                    conn.state = ConnectionState.Authorized
+
             elif log_item.line.startswith("disconnection:"):
                 session_time, user, database, host, port = parse_disconnection_info(log_item.line)
+                last_open = con_statements.remove_open_connection(pid, host, database, user)
+                if last_open:
+                    last_open.session_time = session_time
+                    last_open.state = ConnectionState.Disconnected
+                    con_statements.close_connection(log_item.pid, last_open)
 
+                con_statements.clear_connection()
 
         else:
-            if log_item and not log_item.complete_duration and log_item.statement != "":
-                log_item.append_statement(line)
+            match = re.search(r"\[(\d+)\]\s*\[.*\]\s*LOG:\s*(.*)", line)
+            if match:
+                pid, statement = match.group(1), match.group(2)
+                if statement.startswith("connection received:"):
+                    host, port = parse_connection_info(statement)
+                    connection = Connection(host, port)
+                    con_statements.allocate_connection(pid, connection)
+            else:
+                if log_item and not log_item.complete_duration and log_item.statement != "":
+                    log_item.append_statement(line)
 
-    # Check if the line has a duration
-    # duration_match =
-    # if duration_match:
-    #     duration = float(duration_match.group("duration"))
-    #     timestamp = duration_match.group("timestamp")
-    #     user = duration_match.group("user")
-    #     db = duration_match.group("db")
-    #
-    #     # If a query follows this duration, we assume the query is related to the same duration
-    #     if current_query:
-    #         if duration >= SLOW_QUERY_THRESHOLD:
-    #             slow_queries.append({
-    #                 'timestamp': timestamp,
-    #                 'user': user,
-    #                 'db': db,
-    #                 'duration_ms': duration,
-    #                 'query': current_query
-    #             })
-    #         current_query = None
-    #     continue
-    #
-    # # Check if the line contains a query statement
-    # query_match = query_pattern.search(line)
-    # if query_match:
-    #     current_query = query_match.group("query")
-
-    return slow_queries
+    return con_statements
 
 
 # Example usage
@@ -232,6 +393,7 @@ if __name__ == "__main__":
         log_lines = log_file.readlines()
 
     slow_queries = parse_slow_queries(log_lines)
+    print(slow_queries)
     #
     # # Output slow queries
     # for query in slow_queries:
