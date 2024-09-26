@@ -7,3 +7,4 @@
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 cd $SCRIPT_DIR
 python3 monitor_pg_statement.py
+echo "done"

@@ -46,7 +46,8 @@ def get_pg_statement():
         document = dict(zip(col_names, row))
         document["created_at"] = datetime.datetime.now()
         if document["max_exec_time"] > CONFIG.slow_query_duration or document["rows"] > CONFIG.slow_query_rows:
-            send(f" slow query : {document['query']} , duration : {document['max_exec_time']}")
+            send(f" slow query : {document['query']} , duration : {document['max_exec_time']} "
+                 f", total row : {document['rows']}")
         es.index(index=CONFIG.elastic_index, body=document)
 
 
