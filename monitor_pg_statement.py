@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 import psycopg2
 from config import CONFIG
@@ -44,6 +45,10 @@ def get_pg_statement():
     col_names = [desc[0] for desc in cursor.description]
     for row in rows:
         document = dict(zip(col_names, row))
+        if str(document["query"]).startswith("COPY") or str(document["query"]).startswith("copy"):
+            logging.debug("COPY is for backup only")
+            continue
+        
         document["created_at"] = datetime.datetime.now()
         if document["max_exec_time"] > CONFIG.slow_query_duration or document["rows"] > CONFIG.slow_query_rows:
             send(f" slow query : {document['query']} , duration : {document['max_exec_time']} "
