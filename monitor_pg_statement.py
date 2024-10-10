@@ -25,11 +25,12 @@ def get_pg_statement():
     
     select distinct s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type
         FROM   pg_stat_statements  s 
-		inner join pg_stat_activity a ON s.userid = a.usesysid
+		inner join pg_stat_activity a ON s.userid = a.usesysid and s.
         WHERE s.rows > 100
         and s.max_exec_time > 100
         limit 1000;
 """
+    send_complete = {}
     es = Elasticsearch(
         hosts=CONFIG.elastic_search,
         api_key=CONFIG.elastic_api_key
@@ -51,6 +52,10 @@ def get_pg_statement():
             logging.debug("COPY is for backup only")
             continue
 
+        key_sent = hash(f"{document['query']}")
+        if key_sent in send_complete:
+            continue
+        send_complete[key_sent] = True
         document["created_at"] = datetime.datetime.now()
         if document["max_exec_time"] > CONFIG.slow_query_duration or document["rows"] > CONFIG.slow_query_rows:
             send(f" slow query : {document['query']} , duration : {document['max_exec_time']} "
