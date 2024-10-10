@@ -22,10 +22,12 @@ def reset_pg_statement():
 
 def get_pg_statement():
     sql = """
-    select query, max_exec_time, rows 
-        FROM   pg_stat_statements 
-        WHERE rows > 100
-        and max_exec_time > 100
+    
+    select s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type
+        FROM   pg_stat_statements  s 
+		inner join pg_stat_activity a ON s.userid = a.usesysid
+        WHERE s.rows > 100
+        and s.max_exec_time > 100
         limit 1000;
 """
     es = Elasticsearch(
@@ -52,7 +54,10 @@ def get_pg_statement():
         document["created_at"] = datetime.datetime.now()
         if document["max_exec_time"] > CONFIG.slow_query_duration or document["rows"] > CONFIG.slow_query_rows:
             send(f" slow query : {document['query']} , duration : {document['max_exec_time']} "
-                 f", total row : {document['rows']}")
+                 f", total row : {document['rows']}"
+                 f",  username: {document['usename']} ,client_addr : {document['client_addr']} , {document['backend_type']} "
+                 )
+
         es.index(index=CONFIG.elastic_index, body=document)
 
 
