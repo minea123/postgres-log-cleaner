@@ -25,7 +25,7 @@ def get_pg_statement():
     
     select distinct s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type
         FROM   pg_stat_statements  s 
-		inner join pg_stat_activity a ON s.userid = a.usesysid and s.
+		inner join pg_stat_activity a ON s.userid = a.usesysid 
         WHERE s.rows > 100
         and s.max_exec_time > 100
         limit 1000;
