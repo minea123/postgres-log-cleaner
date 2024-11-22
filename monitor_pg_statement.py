@@ -58,7 +58,7 @@ def get_pg_statement():
         send_complete[key_sent] = True
         document["created_at"] = datetime.datetime.now()
         if document["max_exec_time"] > CONFIG.slow_query_duration or document["rows"] > CONFIG.slow_query_rows:
-            send(f" slow query : {document['query']} , duration : {document['max_exec_time']} "
+            send(f" slow query  @ {CONFIG.db_master}:  {document['query']} , duration : {document['max_exec_time']} "
                  f", total row : {document['rows']}"
                  f",  username: {document['usename']} ,client_addr : {document['client_addr']} , {document['backend_type']} "
                  )
