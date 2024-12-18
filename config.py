@@ -27,6 +27,7 @@ class CleanFileConfig:
         self.slow_query_rows = 10000
         self.white_list_ip = []
         self.connection_log_path= ""
+        self.refresh_mv_path = ""
 
 
 # Create a ConfigParser object
@@ -59,3 +60,4 @@ CONFIG.index_replica = config["elastic"]["index_replica"]
 CONFIG.index_login = config["elastic"]["index_login"]
 CONFIG.white_list_ip = config["connection"]["white_list"].split(",")
 CONFIG.connection_log_path =  config["connection"]["log_path"]
+CONFIG.refresh_mv_path = config["refresh_mv"]["path"]
