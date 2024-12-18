@@ -24,11 +24,10 @@ def refresh_mv(sql):
     cursor.execute(sql)
     logging.info(f"Done refreshing MV {sql}")
     print(f"Done refreshing MV {sql}")
-    connection.commit()
-    connection.close()
-    connection.commit()
     cursor.close()
+    connection.commit()
     connection.close()
+
 
 if __name__ == "__main__":
     sql_list = read_query(CONFIG.refresh_mv_path)
