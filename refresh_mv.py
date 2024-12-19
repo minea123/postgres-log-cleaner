@@ -1,6 +1,7 @@
 import psycopg2, logging
 from config import CONFIG
 import os
+from telegram_message import send
 def read_query(directory_path="./refresh"):
     # Loop through all files in the directory
     sql_list = []
@@ -9,24 +10,37 @@ def read_query(directory_path="./refresh"):
             file_path = os.path.join(directory_path, filename)
             with open(file_path, "r") as file:
                 content = file.read()
-                sql_list.append(content)
+                queries = content.split(";")
+                for query in queries:
+                    if query != "":
+                        sql_list.append(query)
     return sql_list
 
 def refresh_mv(sql):
-    connection = psycopg2.connect(
-        host=CONFIG.db_master,
-        port=CONFIG.db_master_port,
-        database=CONFIG.db_master_db,
-        user=CONFIG.db_master_user,
-        password=CONFIG.db_master_password
-    )
-    cursor = connection.cursor()
-    cursor.execute(sql)
-    logging.info(f"Done refreshing MV {sql}")
-    print(f"Done refreshing MV {sql}")
-    cursor.close()
-    connection.commit()
-    connection.close()
+    try:
+        connection = psycopg2.connect(
+            host=CONFIG.db_master,
+            port=CONFIG.db_master_port,
+            database=CONFIG.db_master_db,
+            user=CONFIG.db_master_user,
+            password=CONFIG.db_master_password
+        )
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        logging.info(f"Done refreshing MV {sql}")
+        print(f"Done refreshing MV {sql}")
+        send(f" done run cache refresh script {sql}")
+        connection.commit()
+    except psycopg2.Error as e:
+        # Handle database errors
+        logging.error(f"Error executing query: {e}")
+        print(f"Error executing query: {e}")
+
+    finally:
+        # Ensure the connection is closed
+        if connection:
+            connection.close()
+            connection.close()
 
 
 if __name__ == "__main__":
