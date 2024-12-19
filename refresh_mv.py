@@ -12,7 +12,7 @@ def read_query(directory_path="./refresh"):
                 content = file.read()
                 queries = content.split(";")
                 for query in queries:
-                    if query != "":
+                    if not query.strip():
                         sql_list.append(query)
     return sql_list
 
@@ -29,7 +29,7 @@ def refresh_mv(sql):
         cursor.execute(sql)
         logging.info(f"Done refreshing MV {sql}")
         print(f"Done refreshing MV {sql}")
-        send(f" done run cache refresh script {sql}")
+        #send(f" done run cache refresh script {sql}")
         connection.commit()
     except psycopg2.Error as e:
         # Handle database errors
