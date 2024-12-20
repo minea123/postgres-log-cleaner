@@ -37,11 +37,9 @@ def refresh_mv(sql):
         # Handle database errors
         logging.error(f"Error executing query: {e}")
         print(f"Error executing query: {e}")
-
     finally:
         # Ensure the connection is closed
         if connection:
-            connection.close()
             connection.close()
 
 
@@ -50,5 +48,6 @@ if __name__ == "__main__":
     for (key, values) in sql_map.items():
         for value in values:
             refresh_mv(value)
-        sleep(300)
         send(f"Refreshing MV {key}")
+        sleep(300)
+
