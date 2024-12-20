@@ -1,3 +1,5 @@
+from time import sleep
+
 import psycopg2, logging
 from config import CONFIG
 import os
@@ -25,6 +27,7 @@ def refresh_mv(sql):
             password=CONFIG.db_master_password
         )
         cursor = connection.cursor()
+        cursor.execute("SET statement_timeout = 0;")
         cursor.execute(sql)
         logging.info(f"Done refreshing MV {sql}")
         print(f"Done refreshing MV {sql}")
@@ -47,4 +50,5 @@ if __name__ == "__main__":
     for (key, values) in sql_map.items():
         for value in values:
             refresh_mv(value)
+        sleep(300)
         send(f"Refreshing MV {key}")
