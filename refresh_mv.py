@@ -4,17 +4,16 @@ import os
 from telegram_message import send
 def read_query(directory_path="./refresh"):
     # Loop through all files in the directory
-    sql_list = []
+    result = {}
     for filename in os.listdir(directory_path):
         if filename.endswith(".sql"):  # Process only .txt files
             file_path = os.path.join(directory_path, filename)
             with open(file_path, "r") as file:
                 content = file.read()
                 queries = content.split(";")
-                for query in queries:
-                    if not query.strip():
-                        sql_list.append(query)
-    return sql_list
+                result[filename] = [ query for query in queries if  query and query.strip()!=""]
+    print("result:", result)
+    return result
 
 def refresh_mv(sql):
     try:
@@ -44,6 +43,8 @@ def refresh_mv(sql):
 
 
 if __name__ == "__main__":
-    sql_list = read_query(CONFIG.refresh_mv_path)
-    for sql in sql_list:
-        refresh_mv(sql)
+    sql_map = read_query(CONFIG.refresh_mv_path)
+    for (key, values) in sql_map.items():
+        for value in values:
+            refresh_mv(value)
+        send(f"Refreshing MV {key}")
