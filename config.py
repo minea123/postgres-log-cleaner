@@ -20,6 +20,7 @@ class CleanFileConfig:
         self.db_slaves = ""
         self.elastic_search = ""
         self.elastic_api_key = ""
+        self.elastic_enable = True
         self.elastic_index = ""
         self.index_replica = ""
         self.index_login = ""
@@ -28,7 +29,11 @@ class CleanFileConfig:
         self.white_list_ip = []
         self.connection_log_path= ""
         self.refresh_mv_path = ""
-
+        self.push_api_enable=False
+        self.push_api_host = ""
+        self.push_api_key = ""
+        self.mode = ""
+        self.isDev = False
 
 # Create a ConfigParser object
 config = configparser.ConfigParser()
@@ -40,6 +45,8 @@ CONFIG.config_path = f'{script_dir}/config.properties'
 config.read(CONFIG.config_path)
 CONFIG.age = int(config['settings']['age'])
 CONFIG.base_path = config['settings']['clean_path']
+CONFIG.mode = config['settings']['mode']
+CONFIG.isDev = CONFIG.mode == 'development' 
 CONFIG.telegram_token = config["telegram"]["token"]
 CONFIG.telegram_conversation_id = config["telegram"]["conversation_id"]
 CONFIG.cpu_threshold = float(config["monitor"]["cpu_threshold"])
@@ -53,6 +60,7 @@ CONFIG.db_master_db = config["postgres"]["db_master_db"]
 CONFIG.db_slaves = config["postgres"]["db_slaves"]
 CONFIG.slow_query_duration = int(config["postgres"]["slow_query_duration"])
 CONFIG.slow_query_rows = int(config['postgres']['slow_query_rows'])
+CONFIG.elastic_enable = False if config["elastic"]["enable"] == 'false' else True
 CONFIG.elastic_search = config["elastic"]["host"]
 CONFIG.elastic_api_key = config["elastic"]["api_key"]
 CONFIG.elastic_index = config["elastic"]["index"]
@@ -61,3 +69,6 @@ CONFIG.index_login = config["elastic"]["index_login"]
 CONFIG.white_list_ip = config["connection"]["white_list"].split(",")
 CONFIG.connection_log_path =  config["connection"]["log_path"]
 CONFIG.refresh_mv_path = config["refresh_mv"]["path"]
+CONFIG.push_api_enable = False if config["push_log"]["api_enable"] == 'false'  else True
+CONFIG.push_api_host = config["push_log"]["api_host"]
+CONFIG.push_api_key = config["push_log"]["api_key"]
