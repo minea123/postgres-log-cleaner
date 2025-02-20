@@ -24,23 +24,22 @@ def reset_pg_statement():
 
 def get_pg_statement():
     sql = """
-    
-    select distinct s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type
-        FROM   pg_stat_statements  s 
-		inner join pg_stat_activity a ON s.userid = a.usesysid 
+        SELECT DISTINCT s.queryid, s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type, s.total_plan_time, s.max_plan_time, s.total_exec_time
+        FROM   pg_stat_statements  s
+        INNER JOIN pg_stat_activity a ON s.userid = a.usesysid
         WHERE s.rows > 100
-        and s.max_exec_time > 100
-        limit 1000;
-"""
+        AND s.max_exec_time > 100
+        LIMIT 1000;
+    """
 
     # in development, no need to filter out slow query
     # since we want data for testing
     if CONFIG.isDev:
         sql = """
-            select distinct s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type
-            FROM   pg_stat_statements  s 
-            left join pg_stat_activity a ON s.userid = a.usesysid 
-            limit 10;
+            SELECT DISTINCT s.queryid, s.query, s.max_exec_time, s.rows , a.datname,a.usename,a.application_name,a.client_addr,a.backend_type, s.total_plan_time, s.max_plan_time, s.total_exec_time
+            FROM   pg_stat_statements  s
+            INNER JOIN pg_stat_activity a ON s.userid = a.usesysid
+            LIMIT 10;
         """     
 
     send_complete = {}    
@@ -84,7 +83,7 @@ def get_pg_statement():
         batch_documents.append(document)
     
     # send docs as batch to API
-    if CONFIG.push_api_enable:
+    if CONFIG.push_api_enable and len(batch_documents) > 0:
         push_to_api(batch_documents)
 
 def push_to_elastic(document):
@@ -97,13 +96,10 @@ def push_to_elastic(document):
 def push_to_api(documents: list[dict]):
     try:
         documents = list(map(map_dateitme, documents))
-        body = dumps(documents, ensure_ascii=False, indent=4)
-        print(documents[0])
+        logger.debug('documents' + dumps(documents, indent=2, ensure_ascii=False))
         response = requests.post(CONFIG.push_api_host, json=documents, headers={
             'X-API-KEY': CONFIG.push_api_key
         })
-
-        print(response.reason)
 
         if response.status_code != 200:
             send(f"""
@@ -120,12 +116,11 @@ def push_to_api(documents: list[dict]):
 def map_dateitme(doc):
     # convert python date object to iso date, to allow parse json
     doc['created_at'] = doc.get('created_at').isoformat()
-    doc['max_exec_time'] = str(doc.get('max_exec_time') or '')
-    doc['rows'] = str(doc.get('rows') or '')
 
     return doc
 
 
 if __name__ == "__main__":
     get_pg_statement()
-    reset_pg_statement()
+    if not CONFIG.isDev:
+        reset_pg_statement()
