@@ -75,7 +75,11 @@ def get_pg_statement():
             send(f" slow query  @ {CONFIG.db_master}:  {document['query']} , duration : {document['max_exec_time']} "
                     f", total row : {document['rows']}"
                     f",  username: {document['usename']} ,client_addr : {document['client_addr']} , {document['backend_type']} "
+                    f",  server_name: {CONFIG.server_name} ,server_ip : {CONFIG.server_ip} "
                     )
+            
+        document['server_name'] = CONFIG.server_name
+        document['server_ip'] = CONFIG.server_ip
     
         if CONFIG.elastic_enable:
             push_to_elastic(document)

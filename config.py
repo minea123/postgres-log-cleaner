@@ -34,6 +34,8 @@ class CleanFileConfig:
         self.push_api_key = ""
         self.mode = ""
         self.isDev = False
+        self.server_name = ''
+        self.server_ip = ''
 
 # Create a ConfigParser object
 config = configparser.ConfigParser()
@@ -72,3 +74,5 @@ CONFIG.refresh_mv_path = config["refresh_mv"]["path"]
 CONFIG.push_api_enable = False if config["push_log"]["api_enable"] == 'false'  else True
 CONFIG.push_api_host = config["push_log"]["api_host"]
 CONFIG.push_api_key = config["push_log"]["api_key"]
+CONFIG.server_name = config['server']['server_name']
+CONFIG.server_ip = config['server']['server_ip']
